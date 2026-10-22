@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% set is_edit = game is not none %}
+{% block title %}{{ 'Редактировать' if is_edit else 'Добавить' }} игру{% endblock %}
+{% block content %}
+<h1 class="mb-3">{{ 'Редактировать' if is_edit else 'Добавить' }} игру</h1>
+<form method="post" class="row g-3">
+    <div class="col-md-8">
+        <label class="form-label">Название *</label>
+        <input name="title" class="form-control" required
+               value="{{ game.title if is_edit else '' }}">
+    </div>
+    <div class="col-md-4">
+        <label class="form-label">Жанр</label>
+        <input name="genre" class="form-control" placeholder="Стратегия, кооператив..."
+               value="{{ (game.genre or '') if is_edit else '' }}">
+    </div>
+    <div class="col-12">
+        <label class="form-label">Описание</label>
+        <textarea name="description" class="form-control" rows="4">{{ (game.description or '') if is_edit else '' }}</textarea>
+    </div>
+    <div class="col-md-6">
+        <label class="form-label">Ссылка на фото</label>
+        <input name="image_url" class="form-control" placeholder="https://..."
+               value="{{ (game.image_url or '') if is_edit else '' }}">
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Мин. игроков</label>
+        <input name="min_players" type="number" min="1" class="form-control"
+               value="{{ game.min_players if is_edit else 2 }}">
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Макс. игроков</label>
+        <input name="max_players" type="number" min="1" class="form-control"
+               value="{{ game.max_players if is_edit else 4 }}">
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Мин. возраст</label>
+        <input name="min_age" type="number" min="0" class="form-control"
+               value="{{ game.min_age if is_edit else 6 }}">
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Мин. длит. (мин)</label>
+        <input name="min_duration" type="number" min="0" class="form-control"
+               value="{{ game.min_duration if is_edit else 30 }}">
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Макс. длит. (мин)</label>
+        <input name="max_duration" type="number" min="0" class="form-control"
+               value="{{ game.max_duration if is_edit else 60 }}">
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Год</label>
+        <input name="year" type="number" class="form-control"
+               value="{{ game.year if is_edit and game.year else '' }}">
+    </div>
+    <div class="col-md-6">
+        <label class="form-label">Издатель</label>
+        <input name="publisher" class="form-control"
+               value="{{ (game.publisher or '') if is_edit else '' }}">
+    </div>
+
+    {% if not is_edit %}
+        <div class="col-12">
+            <hr>
+            <h5>Где купить</h5>
+            <p class="text-muted small">Можно оставить пустым и добавить ссылки позже на странице игры.</p>
+            <div id="store-links"></div>
+            <button type="button" id="add-link-btn" class="btn btn-sm btn-outline-primary">+ Добавить магазин</button>
+        </div>
+    {% endif %}
+
+    <div class="col-12">
+        <button class="btn btn-primary">{{ 'Сохранить' if is_edit else 'Создать' }}</button>
+        {% if is_edit %}
+            <a href="{{ url_for('game_detail', game_id=game.id) }}" class="btn btn-outline-secondary">Отмена</a>
+        {% else %}
+            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">Отмена</a>
+        {% endif %}
+    </div>
+</form>
+
+{% if not is_edit %}
+<script>
+const container = document.getElementById('store-links');
+
+function makeRow() {
+    const row = document.createElement('div');
+    row.className = 'row g-2 mb-2 store-link-row';
+    row.innerHTML = `
+        <div class="col-md-3"><input name="store_name" class="form-control" placeholder="Ozon"></div>
+        <div class="col-md-6"><input name="store_url" class="form-control" placeholder="https://..."></div>
+        <div class="col-md-2"><input name="store_price" type="number" min="0" class="form-control" placeholder="Цена ₽"></div>
+        <div class="col-md-1 d-grid"><button type="button" class="btn btn-outline-danger remove-link">×</button></div>
+    `;
+    return row;
+}
+
+document.getElementById('add-link-btn').addEventListener('click', () => {
+    container.appendChild(makeRow());
+});
+
+container.addEventListener('click', (e) => {
+    if (e.target.classList.contains('remove-link')) {
+        e.target.closest('.store-link-row').remove();
+    }
+});
+</script>
+{% endif %}
+{% endblock %}

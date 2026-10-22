@@ -1,0 +1,7 @@
+pip~=23.2.1
+Flask
+Flask-SQLAlchemy
+Flask-Login
+python-dotenv
+psycopg2-binary
+gunicorn

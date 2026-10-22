@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+{% block title %}{{ game.title }}{% endblock %}
+{% block content %}
+<a href="{{ url_for('index') }}" class="btn btn-sm btn-outline-secondary mb-3">← К каталогу</a>
+
+<div class="row">
+    <div class="col-md-4">
+        {% if game.image_url %}
+            <img src="{{ game.image_url }}" class="img-fluid rounded" alt="{{ game.title }}">
+        {% endif %}
+    </div>
+    <div class="col-md-8">
+        <div class="d-flex align-items-center gap-3">
+    <h1 class="mb-0">{{ game.title }}</h1>
+    {% if current_user.is_authenticated and current_user.is_admin %}
+        <a href="{{ url_for('edit_game', game_id=game.id) }}"
+           class="btn btn-sm btn-outline-primary">✎ Редактировать</a>
+    {% endif %}
+        </div>
+        <p class="text-muted">
+            {{ game.publisher or "" }}{% if game.year %}, {{ game.year }}{% endif %}
+        </p>
+        {% if game.genre %}<p><span class="badge bg-secondary">{{ game.genre }}</span></p>{% endif %}
+
+        <ul class="list-unstyled">
+            <li>👥 Игроки: {{ game.min_players }}–{{ game.max_players }}</li>
+            <li>⏱ Длительность: {{ game.min_duration }}–{{ game.max_duration }} мин</li>
+            <li>🎂 Возраст: {{ game.min_age }}+</li>
+        </ul>
+
+        <p>{{ game.description or "" }}</p>
+
+        <p>
+            <strong>Рейтинг:</strong>
+            {% if game.avg_rating %}
+                ⭐ {{ game.avg_rating }} / 5 ({{ game.reviews|length }} отзывов)
+            {% else %}
+                пока нет отзывов
+            {% endif %}
+        </p>
+
+        <h4>Где купить</h4>
+
+{% if game.store_links %}
+    <ul class="list-group mb-3">
+        {% for link in game.store_links %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                <div>
+                    <a href="{{ link.url }}" target="_blank" rel="noopener">
+                        {{ link.store_name }}
+                    </a>
+                    {% if link.price %}<span class="text-muted"> — {{ link.price }} ₽</span>{% endif %}
+                </div>
+                {% if current_user.is_authenticated and current_user.is_admin %}
+                    <form method="post"
+                          action="{{ url_for('delete_store_link', game_id=game.id, link_id=link.id) }}"
+                          onsubmit="return confirm('Удалить ссылку?');">
+                        <button class="btn btn-sm btn-outline-danger">×</button>
+                    </form>
+                {% endif %}
+            </li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <p class="text-muted">Ссылок на магазины пока нет.</p>
+{% endif %}
+
+{% if current_user.is_authenticated and current_user.is_admin %}
+    <details class="mb-4">
+        <summary class="btn btn-sm btn-outline-primary">+ Добавить ссылку на магазин</summary>
+        <form method="post"
+              action="{{ url_for('add_store_link', game_id=game.id) }}"
+              class="row g-2 mt-2 p-3 bg-light rounded">
+            <div class="col-md-3">
+                <input name="store_name" class="form-control" placeholder="Ozon" required>
+            </div>
+            <div class="col-md-5">
+                <input name="store_url" class="form-control" placeholder="https://..." required>
+            </div>
+            <div class="col-md-2">
+                <input name="store_price" type="number" min="0" class="form-control" placeholder="Цена ₽">
+            </div>
+            <div class="col-md-2 d-grid">
+                <button class="btn btn-primary">Добавить</button>
+            </div>
+        </form>
+    </details>
+{% endif %}
+    </div>
+</div>
+
+<hr class="my-4">
+
+<h3 class="mt-4">Отзывы</h3>
+
+{% if reviews %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <p class="mb-0 text-muted">{{ reviews|length }} отзыв(ов)</p>
+    <form method="get" class="d-flex gap-2 align-items-center">
+        <label class="form-label mb-0 small">Сортировка:</label>
+        <select name="sort" class="form-select form-select-sm" onchange="this.form.submit()">
+            <option value="newest"  {% if sort == 'newest'  %}selected{% endif %}>Сначала новые</option>
+            <option value="oldest"  {% if sort == 'oldest'  %}selected{% endif %}>Сначала старые</option>
+            <option value="highest" {% if sort == 'highest' %}selected{% endif %}>Высокие оценки</option>
+            <option value="lowest"  {% if sort == 'lowest'  %}selected{% endif %}>Низкие оценки</option>
+            <option value="helpful" {% if sort == 'helpful' %}selected{% endif %}>Самые полезные</option>
+        </select>
+    </form>
+</div>
+{% endif %}
+
+{% if current_user.is_authenticated %}
+    {% if not user_review %}
+        <form method="post" action="{{ url_for('add_review', game_id=game.id) }}" class="mb-4 p-3 bg-light rounded">
+            <h6>Оставить отзыв</h6>
+            <div class="mb-2">
+                <select name="rating" class="form-select form-select-sm" required>
+                    <option value="5">5 — отлично</option>
+                    <option value="4">4 — хорошо</option>
+                    <option value="3">3 — нормально</option>
+                    <option value="2">2 — так себе</option>
+                    <option value="1">1 — плохо</option>
+                </select>
+            </div>
+            <div class="mb-2">
+                <textarea name="text" class="form-control form-control-sm" rows="3" placeholder="Поделитесь впечатлениями..."></textarea>
+            </div>
+            <button class="btn btn-sm btn-primary">Отправить</button>
+        </form>
+    {% endif %}
+{% else %}
+    <p><a href="{{ url_for('login', next=request.path) }}">Войдите</a>, чтобы оставить отзыв.</p>
+{% endif %}
+
+{% for review in reviews %}
+    {% set is_mine = current_user.is_authenticated and current_user.id == review.user_id %}
+    {% set user_helped = false %}
+    {% if current_user.is_authenticated %}
+        {% set user_helped = review.helpful_votes | selectattr('user_id', 'equalto', current_user.id) | list | length > 0 %}
+    {% endif %}
+
+    <div class="card mb-2">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <strong>{{ review.author.username }}</strong>
+                    <span class="text-warning">
+                        {% for _ in range(review.rating) %}★{% endfor %}{% for _ in range(5 - review.rating) %}☆{% endfor %}
+                    </span>
+                    <small class="text-muted">
+                        {{ review.created_at.strftime("%d.%m.%Y") }}
+                        {% if review.updated_at %}(изменён){% endif %}
+                    </small>
+                </div>
+                {% if is_mine or (current_user.is_authenticated and current_user.is_admin) %}
+                    <div class="d-flex gap-1">
+                        {% if is_mine %}
+                            <details>
+                                <summary class="btn btn-sm btn-outline-primary">✎</summary>
+                                <form method="post"
+                                      action="{{ url_for('edit_review', game_id=game.id, review_id=review.id) }}"
+                                      class="mt-2 p-2 border rounded" style="min-width: 250px;">
+                                    <select name="rating" class="form-select form-select-sm mb-2" required>
+                                        {% for n in [5,4,3,2,1] %}
+                                            <option value="{{ n }}" {% if review.rating == n %}selected{% endif %}>{{ n }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <textarea name="text" class="form-control form-control-sm mb-2" rows="3">{{ review.text or '' }}</textarea>
+                                    <button class="btn btn-sm btn-primary">Сохранить</button>
+                                </form>
+                            </details>
+                        {% endif %}
+                        <form method="post"
+                              action="{{ url_for('delete_review', game_id=game.id, review_id=review.id) }}"
+                              onsubmit="return confirm('Удалить отзыв?');">
+                            <button class="btn btn-sm btn-outline-danger">×</button>
+                        </form>
+                    </div>
+                {% endif %}
+            </div>
+            <p class="mb-2 mt-2">{{ review.text or '' }}</p>
+            <div>
+                {% if current_user.is_authenticated and not is_mine %}
+                    <form method="post"
+                          action="{{ url_for('toggle_helpful', review_id=review.id) }}"
+                          class="d-inline">
+                        <button class="btn btn-sm {{ 'btn-primary' if user_helped else 'btn-outline-secondary' }}">
+                            👍 Полезно ({{ review.helpful_votes|length }})
+                        </button>
+                    </form>
+                {% else %}
+                    <span class="text-muted small">👍 Полезно ({{ review.helpful_votes|length }})</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+{% else %}
+    <p class="text-muted">Пока отзывов нет. Будьте первым!</p>
+{% endfor %}
+{% endblock %}

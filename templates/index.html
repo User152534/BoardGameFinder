@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="mb-4">Каталог настольных игр</h1>
+
+<form method="get" class="row g-2 mb-4 p-3 bg-light rounded">
+    <div class="col-md-2">
+        <label class="form-label">Игроков</label>
+        <input type="number" name="players" min="1" class="form-control"
+               value="{{ request.args.get('players', '') }}">
+    </div>
+    <div class="col-md-2">
+        <label class="form-label">Длит. ≤ мин</label>
+        <input type="number" name="duration" min="1" class="form-control"
+               value="{{ request.args.get('duration', '') }}">
+    </div>
+    <div class="col-md-2">
+        <label class="form-label">Возраст ≤</label>
+        <input type="number" name="age" min="1" class="form-control"
+               value="{{ request.args.get('age', '') }}">
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Жанр</label>
+        <select name="genre" class="form-select">
+            <option value="">Любой</option>
+            {% for g in genres %}
+                <option value="{{ g }}" {% if request.args.get('genre') == g %}selected{% endif %}>{{ g }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-md-3 d-flex align-items-end gap-2">
+        <button class="btn btn-primary">Применить</button>
+        <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">Сброс</a>
+    </div>
+</form>
+
+{% if games %}
+    <div class="row row-cols-1 row-cols-md-3 g-4">
+        {% for game in games %}
+            <div class="col">
+                <div class="card h-100">
+                    {% if game.image_url %}
+                        <img src="{{ game.image_url }}" class="card-img-top"
+                             alt="{{ game.title }}" style="height: 200px; object-fit: cover;">
+                    {% endif %}
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="card-title">{{ game.title }}</h5>
+                        <p class="card-text text-muted small">
+                            {{ game.min_players }}–{{ game.max_players }} игроков ·
+                            {{ game.min_duration }}–{{ game.max_duration }} мин ·
+                            {{ game.min_age }}+
+                        </p>
+                        {% if game.avg_rating %}
+                            <p class="mb-2">⭐ {{ game.avg_rating }} ({{ game.reviews|length }})</p>
+                        {% endif %}
+                        <a href="{{ url_for('game_detail', game_id=game.id) }}"
+                           class="btn btn-primary btn-sm mt-auto">Подробнее</a>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="alert alert-info">По вашим фильтрам игр не найдено. Попробуйте изменить параметры.</div>
+{% endif %}
+{% endblock %}

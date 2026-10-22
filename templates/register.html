@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="mb-3">Регистрация</h1>
+<form method="post" style="max-width: 400px;">
+    <div class="mb-2">
+        <label class="form-label">Имя пользователя</label>
+        <input name="username" class="form-control" required>
+    </div>
+    <div class="mb-2">
+        <label class="form-label">Email</label>
+        <input name="email" type="email" class="form-control" required>
+    </div>
+    <div class="mb-2">
+        <label class="form-label">Пароль (мин. 6 символов)</label>
+        <input name="password" type="password" class="form-control" minlength="6" required>
+    </div>
+    <button class="btn btn-primary">Зарегистрироваться</button>
+    <a href="{{ url_for('login') }}" class="btn btn-link">Уже есть аккаунт?</a>
+</form>
+{% endblock %}
