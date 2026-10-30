@@ -14,6 +14,7 @@ class User(db.Model, UserMixin):
     password_hash = db.Column(db.String(255), nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
 
+    favorites = db.relationship("Favorite", backref="user", cascade="all, delete-orphan", lazy=True)
     reviews = db.relationship("Review", backref="author", lazy=True)
 
     def set_password(self, password: str) -> None:
@@ -38,6 +39,7 @@ class Game(db.Model):
     publisher = db.Column(db.String(100))
     year = db.Column(db.Integer)
 
+    favorites = db.relationship("Favorite", backref="game", cascade="all, delete-orphan", lazy=True)
     reviews = db.relationship(
         "Review", backref="game", cascade="all, delete-orphan", lazy=True
     )
@@ -88,4 +90,15 @@ class ReviewHelpful(db.Model):                                      # ← нов
 
     __table_args__ = (
         db.UniqueConstraint("review_id", "user_id", name="unique_review_helpful"),
+    )
+
+class Favorite(db.Model):
+    __tablename__ = "favorites"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    game_id = db.Column(db.Integer, db.ForeignKey("games.id"), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "game_id", name="unique_user_favorite"),
     )

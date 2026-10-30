@@ -8,7 +8,7 @@ from flask_login import (
     LoginManager, login_user, logout_user, login_required, current_user,
 )
 
-from models import db, User, Game, Review, ReviewHelpful, StoreLink
+from models import db, User, Game, Review, ReviewHelpful, Favorite, StoreLink
 
 load_dotenv()
 
@@ -75,8 +75,16 @@ def index():
         .order_by(Game.genre)
         .all()
     ]
-    return render_template("index.html", games=games, genres=genres)
 
+    favorite_ids = set()
+    if current_user.is_authenticated:
+        favorite_ids = {
+            f.game_id for f in Favorite.query.filter_by(user_id=current_user.id).all()
+        }
+
+    return render_template(
+        "index.html", games=games, genres=genres, favorite_ids=favorite_ids
+    )
 
 # ---------- Страница игры ----------
 
@@ -89,6 +97,15 @@ def game_detail(game_id: int):
         user_review = Review.query.filter_by(
             game_id=game.id, user_id=current_user.id
         ).first()
+
+    is_favorite = False
+    if current_user.is_authenticated:
+        is_favorite = (
+            Favorite.query.filter_by(
+                user_id=current_user.id, game_id=game.id
+            ).first()
+            is not None
+        )
 
     sort = request.args.get("sort", "newest")
     reviews = list(game.reviews)
@@ -105,7 +122,12 @@ def game_detail(game_id: int):
         reviews.sort(key=lambda r: r.created_at, reverse=True)
 
     return render_template(
-        "game.html", game=game, user_review=user_review, reviews=reviews, sort=sort
+        "game.html",
+        game=game,
+        user_review=user_review,
+        reviews=reviews,
+        sort=sort,
+        is_favorite=is_favorite,
     )
 
 
@@ -342,6 +364,48 @@ def logout():
     flash("Вы вышли из аккаунта.", "info")
     return redirect(url_for("index"))
 
+
+# ---------- Профиль ----------
+
+@app.route("/profile")
+@login_required
+def profile():
+    reviews = (
+        Review.query.filter_by(user_id=current_user.id)
+        .order_by(Review.created_at.desc())
+        .all()
+    )
+    favorites = (
+        Favorite.query.filter_by(user_id=current_user.id)
+        .order_by(Favorite.created_at.desc())
+        .all()
+    )
+    return render_template("profile.html", reviews=reviews, favorites=favorites)
+
+# ---------- Избранное ----------
+
+@app.route("/game/<int:game_id>/favorite", methods=["POST"])
+@login_required
+def toggle_favorite(game_id: int):
+    game = db.get_or_404(Game, game_id)
+    existing = Favorite.query.filter_by(
+        user_id=current_user.id, game_id=game.id
+    ).first()
+
+    if existing:
+        db.session.delete(existing)
+        flash("Игра удалена из избранного.", "info")
+    else:
+        db.session.add(Favorite(user_id=current_user.id, game_id=game.id))
+        flash("Игра добавлена в избранное.", "success")
+
+    db.session.commit()
+
+    # Возвращаем пользователя туда, откуда он нажал кнопку — с проверкой на свой же хост
+    referrer = request.referrer
+    if referrer and is_safe_url(referrer):
+        return redirect(referrer)
+    return redirect(url_for("game_detail", game_id=game.id))
 
 # ---------- CLI-команды ----------
 
